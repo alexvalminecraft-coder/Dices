@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online Dice - Virtual Simulator</title>
+  <style>
+    :root {
+      --bg-color: #e9eef2;
+      --card-bg: #ffffff;
+      --primary-orange-gradient: linear-gradient(180deg, #ffb74d 0%, #fb8c00 100%);
+      --text-color: #1e293b;
+      --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.05);
+      --shadow-die: inset 0 -4px 8px rgba(0, 0, 0, 0.15), 0 8px 18px rgba(0, 0, 0, 0.12);
+      --shadow-btn: 0 8px 18px rgba(251, 140, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Contenedor Principal Ampliado para alojar los botones laterales */
+    .app-card {
+      background: var(--card-bg);
+      border-radius: 32px;
+      padding: 45px 35px;
+      width: 92%;
+      max-width: 680px;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    /* Título que abre el panel al hacer clic */
+    .title {
+      font-size: 2.1rem;
+      font-weight: 900;
+      color: var(--text-color);
+      letter-spacing: 0.5px;
+      margin-bottom: 30px;
+      text-transform: uppercase;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    .title:hover {
+      opacity: 0.85;
+    }
+
+    .title:active {
+      transform: scale(0.98);
+    }
+
+    /* Contenedor de Dados */
+    .dice-container {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      width: 100%;
+      max-width: 500px;
+      margin-bottom: 35px;
+      perspective: 600px;
+    }
+
+    .die {
+      flex: 1;
+      aspect-ratio: 1;
+      max-width: 100px;
+      border-radius: 20px;
+      box-shadow: var(--shadow-die);
+      transition: background-color 0.2s ease, transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+
+    .die.rolling {
+      animation: flipRoll 0.5s ease-in-out;
+    }
+
+    @keyframes flipRoll {
+      0% { transform: rotateX(0deg) rotateY(0deg) scale(1); }
+      50% { transform: rotateX(180deg) rotateY(180deg) scale(1.15); }
+      100% { transform: rotateX(360deg) rotateY(360deg) scale(1); }
+    }
+
+    /* Layout principal para la zona de botones inferior */
+    .action-section {
+      display: flex;
+      gap: 15px;
+      width: 100%;
+      align-items: center;
+    }
+
+    /* Botón Principal */
+    .btn-roll {
+      background: var(--primary-orange-gradient);
+      color: #ffffff;
+      border: none;
+      flex: 1;
+      padding: 18px 0;
+      border-radius: 18px;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: var(--shadow-btn);
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+    }
+
+    .btn-roll:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px rgba(251, 140, 0, 0.45);
+    }
+
+    .btn-roll:active {
+      transform: translateY(1px);
+    }
+
+    /* Panel Lateral de Botones Estilo Roblox (Decorativos) */
+    .side-buttons-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 155px;
+      flex-shrink: 0;
+    }
+
+    .deco-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.78rem;
+      color: #ffffff;
+      text-shadow: 1px 1px 0px rgba(0,0,0,0.4);
+      border: 2px solid rgba(255,255,255,0.7);
+      box-shadow: inset 0 2px 3px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.15);
+      cursor: default;
+      user-select: none;
+    }
+
+    /* Colores y estilos exactos de los botones decorativos */
+    .btn-addmore { background-color: #2563eb; }
+    .btn-deal    { background-color: #eab308; color: #1e293b; text-shadow: none; }
+    .btn-ltrade  { background-color: #dc2626; }
+    .btn-fair    { background-color: #16a34a; }
+    .btn-last    { background-color: #7c3aed; }
+    .btn-nothanks{ background-color: #ea580c; }
+
+    /* Panel Secreto Oculto a la Derecha */
+    .admin-panel {
+      position: fixed;
+      top: 20px;
+      right: -340px;
+      width: 300px;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+      border: 1px solid #e2e8f0;
+      transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+    }
+
+    .admin-panel.active {
+      right: 20px;
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      border-bottom: 1px solid #edf2f7;
+      padding-bottom: 10px;
+    }
+
+    .admin-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #334155;
+    }
+
+    .admin-close {
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      color: #94a3b8;
+      cursor: pointer;
+    }
+
+    .admin-section {
+      margin-bottom: 16px;
+    }
+
+    .admin-section label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .color-checkboxes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .color-checkboxes label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: #334155;
+      cursor: pointer;
+    }
+
+    .force-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .force-grid select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 0.78rem;
+      color: #334155;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Card Principal -->
+  <div class="app-card">
+    <h1 class="title" id="mainTitle">ONLINE DICE</h1>
+    
+    <div class="dice-container">
+      <div class="die" id="die0"></div>
+      <div class="die" id="die1"></div>
+      <div class="die" id="die2"></div>
+      <div class="die" id="die3"></div>
+    </div>
+
+    <!-- Zona Inferior: Botón de Tirar + Panel Decorativo al Lado[cite: 9] -->
+    <div class="action-section">
+      <button class="btn-roll" id="rollBtn">GO AGAIN !</button>
+      
+      <div class="side-buttons-panel">
+        <div class="deco-btn btn-addmore">+ Add More</div>
+        <div class="deco-btn btn-deal">🤝 Deal?</div>
+        <div class="deco-btn btn-ltrade">❌ L Trade</div>
+        <div class="deco-btn btn-fair">✅ Fair Trade</div>
+        <div class="deco-btn btn-last">📄 Last Offer</div>
+        <div class="deco-btn btn-nothanks">🐥 No Thanks</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Admin Oculto (Haz clic en ONLINE DICE para abrirlo) -->
+  <div class="admin-panel" id="adminPanel">
+    <div class="admin-header">
+      <span class="admin-title">Panel Secreto</span>
+      <button class="admin-close" id="closeAdmin">✕</button>
+    </div>
+
+    <!-- Excluir Colores -->
+    <div class="admin-section">
+      <label>Excluir Colores (No saldrán):</label>
+      <div class="color-checkboxes">
+        <label><input type="checkbox" class="exclude-color" value="#ff4d4d"> Red</label>
+        <label><input type="checkbox" class="exclude-color" value="#ff9800"> Orange</label>
+        <label><input type="checkbox" class="exclude-color" value="#ffd54f"> Yellow</label>
+        <label><input type="checkbox" class="exclude-color" value="#2ecc71"> Green</label>
+        <label><input type="checkbox" class="exclude-color" value="#3498db"> Blue</label>
+        <label><input type="checkbox" class="exclude-color" value="#9b59b6"> Purple</label>
+      </div>
+    </div>
+
+    <!-- Forzar Colores Específicos -->
+    <div class="admin-section">
+      <label>Forzar Color Exacto:</label>
+      <div class="force-grid">
+        <select id="force0">
+          <option value="">Dado 1 (Random)</option>
+          <option value="#ff4d4d">Red</option>
+          <option value="#ff9800">Orange</option>
+          <option value="#ffd54f">Yellow</option>
+          <option value="#2ecc71">Green</option>
+          <option value="#3498db">Blue</option>
+          <option value="#9b59b6">Purple</option>
+        </select>
+        <select id="force1">
+          <option value="">Dado 2 (Random)</option>
+          <option value="#ff4d4d">Red</option>
+          <option value="#ff9800">Orange</option>
+          <option value="#ffd54f">Yellow</option>
+          <option value="#2ecc71">Green</option>
+          <option value="#3498db">Blue</option>
+          <option value="#9b59b6">Purple</option>
+        </select>
+        <select id="force2">
+          <option value="">Dado 3 (Random)</option>
+          <option value="#ff4d4d">Red</option>
+          <option value="#ff9800">Orange</option>
+          <option value="#ffd54f">Yellow</option>
+          <option value="#2ecc71">Green</option>
+          <option value="#3498db">Blue</option>
+          <option value="#9b59b6">Purple</option>
+        </select>
+        <select id="force3">
+          <option value="">Dado 4 (Random)</option>
+          <option value="#ff4d4d">Red</option>
+          <option value="#ff9800">Orange</option>
+          <option value="#ffd54f">Yellow</option>
+          <option value="#2ecc71">Green</option>
+          <option value="#3498db">Blue</option>
+          <option value="#9b59b6">Purple</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ALL_COLORS = [
+      '#ff4d4d', // Red
+      '#ff9800', // Orange
+      '#ffd54f', // Yellow
+      '#2ecc71', // Green
+      '#3498db', // Blue
+      '#9b59b6'  // Purple
+    ];
+
+    let currentColors = ['#ff4d4d', '#ff9800', '#ffd54f', '#2ecc71'];
+
+    const diceElements = [
+      document.getElementById('die0'),
+      document.getElementById('die1'),
+      document.getElementById('die2'),
+      document.getElementById('die3')
+    ];
+
+    const rollBtn = document.getElementById('rollBtn');
+    const mainTitle = document.getElementById('mainTitle');
+    const adminPanel = document.getElementById('adminPanel');
+    const closeAdmin = document.getElementById('closeAdmin');
+
+    function updateDiceUI() {
+      diceElements.forEach((die, idx) => {
+        die.style.backgroundColor = currentColors[idx];
+      });
+    }
+
+    function getNextColor(dieIndex) {
+      const forceVal = document.getElementById(`force${dieIndex}`).value;
+      if (forceVal) return forceVal;
+
+      const excluded = Array.from(document.querySelectorAll('.exclude-color:checked')).map(cb => cb.value);
+      const allowedColors = ALL_COLORS.filter(c => !excluded.includes(c));
+      const finalPool = allowedColors.length > 0 ? allowedColors : ALL_COLORS;
+
+      return finalPool[Math.floor(Math.random() * finalPool.length)];
+    }
+
+    function rollDice() {
+      rollBtn.disabled = true;
+
+      diceElements.forEach((die, index) => {
+        die.classList.remove('rolling');
+        void die.offsetWidth;
+        
+        setTimeout(() => {
+          die.classList.add('rolling');
+        }, index * 40);
+      });
+
+      setTimeout(() => {
+        for (let i = 0; i < 4; i++) {
+          currentColors[i] = getNextColor(i);
+        }
+        updateDiceUI();
+      }, 250);
+
+      setTimeout(() => {
+        diceElements.forEach(die => die.classList.remove('rolling'));
+        rollBtn.disabled = false;
+      }, 600);
+    }
+
+    rollBtn.addEventListener('click', rollDice);
+
+    mainTitle.addEventListener('click', () => {
+      adminPanel.classList.toggle('active');
+    });
+
+    closeAdmin.addEventListener('click', () => {
+      adminPanel.classList.remove('active');
+    });
+
+    updateDiceUI();
+  </script>
+</body>
+</html>
